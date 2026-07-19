@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "units": "mm",
+  "items": [
+    {"id":"I-STEEL","label":"Steel reference block","kind":"assembly_component","transform":{"position":[0,0,0],"rotation":[0,0,0]},"physicalProperties":{"role":"base","material":"steel","densityKgM3":7850}},
+    {"id":"I-TOUCH","label":"Touching block","kind":"assembly_component","transform":{"position":[10,0,0],"rotation":[0,0,0]},"physicalProperties":{"role":"contact body","material":null,"densityKgM3":null}},
+    {"id":"I-OVERLAP","label":"Interfering aluminium block","kind":"assembly_component","transform":{"position":[14,0,0],"rotation":[0,0,0]},"physicalProperties":{"role":"interference probe","material":"aluminium","densityKgM3":2700}}
+  ],
+  "features": [
+    {"id":"F-STEEL","itemId":"I-STEEL","operation":"box","parameters":{"length":10,"width":10,"height":10},"confidence":1,"status":"confirmed"},
+    {"id":"F-TOUCH","itemId":"I-TOUCH","operation":"box","parameters":{"length":10,"width":10,"height":10},"confidence":1,"status":"confirmed"},
+    {"id":"F-OVERLAP","itemId":"I-OVERLAP","operation":"box","parameters":{"length":10,"width":10,"height":10},"confidence":1,"status":"confirmed"}
+  ]
+}

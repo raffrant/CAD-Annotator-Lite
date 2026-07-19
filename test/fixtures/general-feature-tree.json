@@ -1,0 +1,58 @@
+{
+  "items": [
+    {"id":"I-PLATE","label":"Cut and filleted plate","transform":{"position":[0,0,0],"rotation":[0,0,0]}},
+    {"id":"I-TURNED","label":"Revolved ring","transform":{"position":[100,0,0],"rotation":[0,0,0]}},
+    {"id":"I-CHAMFER","label":"Chamfered block","transform":{"position":[150,0,0],"rotation":[0,0,0]}}
+  ],
+  "features": [
+    {
+      "id":"F-PLATE","itemId":"I-PLATE","operation":"feature_tree","confidence":1,"status":"confirmed",
+      "parameters":{
+        "sketches":[
+          {"id":"S-BASE","plane":"XY","origin":[0,0,0],"profiles":[
+            {"id":"P-OUTER","entities":[{"id":"E-OUTER","type":"polyline","points":[[-40,-25],[40,-25],[40,25],[-40,25]],"closed":true}]},
+            {"id":"P-HOLE","entities":[{"id":"E-HOLE","type":"circle","center":[0,0],"radius":10}]}
+          ],"constraints":[{"type":"horizontal","refs":["E-OUTER"]},{"type":"fixed","refs":["E-HOLE"]}]},
+          {"id":"S-CUT","plane":"XY","origin":[0,0,0],"profiles":[
+            {"id":"P-CUT","entities":[{"id":"E-CUT","type":"circle","center":[25,0],"radius":4}]}
+          ],"constraints":[{"type":"radius","refs":["E-CUT"],"value":4}]},
+          {"id":"S-BOSS","plane":"XY","origin":[0,0,7.5],"profiles":[
+            {"id":"P-BOSS","entities":[{"id":"E-BOSS","type":"circle","center":[-20,0],"radius":6}]}
+          ],"constraints":[{"type":"radius","refs":["E-BOSS"],"value":6}]}
+        ],
+        "operations":[
+          {"id":"O-BASE","type":"extrude","sketchId":"S-BASE","outerProfileId":"P-OUTER","holeProfileIds":["P-HOLE"],"distance":8,"symmetric":false,"mode":"new"},
+          {"id":"O-BOSS","type":"extrude","sketchId":"S-BOSS","outerProfileId":"P-BOSS","holeProfileIds":[],"distance":12,"symmetric":false,"mode":"add"},
+          {"id":"O-CUT","type":"extrude","sketchId":"S-CUT","outerProfileId":"P-CUT","holeProfileIds":[],"distance":8,"symmetric":false,"mode":"cut"},
+          {"id":"O-FILLET","type":"fillet","radius":3,"edgeSelector":"vertical"}
+        ]
+      }
+    },
+    {
+      "id":"F-TURNED","itemId":"I-TURNED","operation":"feature_tree","confidence":1,"status":"confirmed",
+      "parameters":{
+        "sketches":[{"id":"S-REVOLVE","plane":"XZ","origin":[0,0,0],"profiles":[
+          {"id":"P-REVOLVE","entities":[{"id":"E-REVOLVE","type":"polyline","points":[[10,0],[20,0],[20,30],[10,30]],"closed":true}]}
+        ],"constraints":[{"type":"vertical","refs":["E-REVOLVE"]}]}],
+        "operations":[{"id":"O-REVOLVE","type":"revolve","sketchId":"S-REVOLVE","outerProfileId":"P-REVOLVE","holeProfileIds":[],"axisOrigin":[0,0,0],"axisDirection":[0,0,1],"angle":360,"mode":"new"}]
+      }
+    },
+    {
+      "id":"F-CHAMFER","itemId":"I-CHAMFER","operation":"feature_tree","confidence":1,"status":"confirmed",
+      "parameters":{
+        "sketches":[{"id":"S-BLOCK","plane":"XY","origin":[0,0,0],"profiles":[
+          {"id":"P-BLOCK","entities":[
+            {"id":"L1","type":"line","start":[-15,-10],"end":[15,-10]},
+            {"id":"L2","type":"line","start":[15,-10],"end":[15,0]},
+            {"id":"A1","type":"arc","center":[0,0],"radius":15,"startAngle":0,"endAngle":180,"clockwise":false},
+            {"id":"L3","type":"line","start":[-15,0],"end":[-15,-10]}
+          ]}
+        ],"constraints":[{"type":"horizontal","refs":["L1"]},{"type":"vertical","refs":["L2","L3"]},{"type":"tangent","refs":["L2","A1"]}]}],
+        "operations":[
+          {"id":"O-BLOCK","type":"extrude","sketchId":"S-BLOCK","outerProfileId":"P-BLOCK","holeProfileIds":[],"distance":20,"symmetric":false,"mode":"new"},
+          {"id":"O-CHAMFER","type":"chamfer","distance":2,"edgeSelector":"vertical"}
+        ]
+      }
+    }
+  ]
+}

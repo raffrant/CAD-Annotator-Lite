@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "offline-inferred-cad-geometry",
+  "documentType": "mechanical_assembly",
+  "stepEligible": true,
+  "assembly": {
+    "mode": "compound",
+    "itemIds": ["plate", "rail", "post"]
+  },
+  "items": [
+    {
+      "id": "plate",
+      "label": "Base plate",
+      "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0] },
+      "features": [
+        { "id": "F-plate", "operation": "box", "parameters": { "length": 100, "width": 60, "height": 4 } }
+      ]
+    },
+    {
+      "id": "rail",
+      "label": "Raised rail",
+      "transform": { "position": [0, 28, 12], "rotation": [0, 0, 0] },
+      "features": [
+        { "id": "F-rail", "operation": "box", "parameters": { "length": 100, "width": 4, "height": 20 } }
+      ]
+    },
+    {
+      "id": "post",
+      "label": "Post",
+      "transform": { "position": [0, 0, 2], "rotation": [0, 0, 0] },
+      "features": [
+        { "id": "F-post", "operation": "cylinder", "parameters": { "radius": 5, "height": 30 } }
+      ]
+    }
+  ],
+  "features": [
+    { "id": "F-plate", "itemId": "plate", "operation": "box", "parameters": { "length": 100, "width": 60, "height": 4 } }
+  ]
+}

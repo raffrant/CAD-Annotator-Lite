@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "units": "mm",
+  "items": [{"id":"I-1","label":"Dimensioned arched plate","kind":"mechanical_part","transform":{"position":[0,0,0],"rotation":[0,0,0]}}],
+  "features": [{
+    "id":"F-1","itemId":"I-1","operation":"arched_plate","confidence":1,"status":"approximate",
+    "confirmedParameters":["outerWidth","straightHeight","outerRadius","innerRadius","slotWidth","slotHeight","slotLeftOffset","slotBottomOffset"],
+    "inferredParameters":["thickness"],
+    "parameters":{"outerWidth":70,"straightHeight":60,"outerRadius":35,"innerRadius":20,"slotWidth":50,"slotHeight":15,"slotLeftOffset":10,"slotBottomOffset":15,"thickness":10}
+  }]
+}

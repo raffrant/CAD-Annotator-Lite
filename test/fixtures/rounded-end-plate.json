@@ -1,0 +1,5 @@
+{
+  "schemaVersion":2,"units":"mm",
+  "items":[{"id":"I-1","label":"Rounded-end mounting plate","kind":"mechanical_part","transform":{"position":[0,0,0],"rotation":[0,0,0]}}],
+  "features":[{"id":"F-1","itemId":"I-1","operation":"rounded_end_plate","confidence":1,"status":"approximate","confirmedParameters":["overallWidth","overallHeight","endRadius","cornerRadius","centerHoleDiameter","mountingHoleRadius","notchHeight"],"inferredParameters":["centerHoleCenter","mountingHoleCenters","notchDepth","thickness"],"parameters":{"overallWidth":175,"overallHeight":80,"endRadius":65,"cornerRadius":8,"centerHoleDiameter":45,"centerHoleCenter":[82,40],"mountingHoleRadius":6,"mountingHoleCenters":[[42,68],[60,68],[132,68],[42,12],[132,12]],"notchDepth":8,"notchHeight":60,"thickness":10}}]
+}

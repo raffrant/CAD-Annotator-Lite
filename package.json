@@ -1,0 +1,14 @@
+{
+  "name": "cad-annotator-lite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A fast, zero-dependency CAD drawing annotation workspace",
+  "scripts": {
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" },
+  "license": "Apache-2.0"
+}

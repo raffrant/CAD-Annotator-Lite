@@ -1,0 +1,26 @@
+.provider {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.provider span {
+  display: flex;
+  flex-direction: column;
+}
+
+.provider strong { font-size: 12px; }
+.provider small { margin-top: 5px; color: var(--muted); font-size: 10px; }
+
+.provider select {
+  max-width: 126px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: #fff;
+  font-size: 11px;
+}
+
+.provider select:disabled { opacity: .55; }

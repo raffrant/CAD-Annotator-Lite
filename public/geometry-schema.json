@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.cad-annotator/geometry-schema.json",
+  "title": "CAD Annotator Local AI Geometry",
+  "type": "object",
+  "required": ["schemaVersion", "artifactType", "units", "items", "features", "geometryValidation"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "artifactType": { "enum": ["ai-cad-geometry", "local-ai-cad-geometry"] },
+    "units": { "const": "mm" },
+    "automationMode": { "const": "fully-automatic" },
+    "manufacturingStatus": { "enum": ["approximate-unverified", "dimensionally-confirmed"] },
+    "stepEligible": { "type": "boolean" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" },
+          "transform": {
+            "type": "object",
+            "properties": {
+              "position": { "$ref": "#/$defs/vector3" },
+              "rotation": { "$ref": "#/$defs/vector3" }
+            }
+          },
+          "physicalProperties": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string" },
+              "material": { "type": ["string", "null"] },
+              "densityKgM3": { "type": ["number", "null"], "exclusiveMinimum": 0 }
+            }
+          },
+          "features": { "type": "array", "items": { "$ref": "#/$defs/feature" } }
+        }
+      }
+    },
+    "features": { "type": "array", "items": { "$ref": "#/$defs/feature" } },
+    "annotations": { "type": "array" },
+    "parameters": { "type": "object" },
+    "assumptions": { "type": "array", "items": { "type": "string" } },
+    "geometryValidation": {
+      "type": "object",
+      "required": ["valid", "errors", "featureCount", "solidCount"],
+      "properties": {
+        "valid": { "type": "boolean" },
+        "errors": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "featureCount": { "type": "integer", "minimum": 0 },
+        "solidCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "dimensionLedger": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path", "value", "unit", "role", "source"],
+        "properties": {
+          "id": { "type": "string" },
+          "itemId": { "type": ["string", "null"] },
+          "featureId": { "type": ["string", "null"] },
+          "operation": { "type": ["string", "null"] },
+          "path": { "type": "string" },
+          "value": { "oneOf": [{ "type": "number" }, { "type": "array", "items": { "type": "number" } }] },
+          "unit": { "enum": ["mm", "deg", "unitless"] },
+          "role": { "enum": ["size", "coordinate", "angle", "count"] },
+          "source": { "type": "string" }
+        }
+      }
+    },
+    "physicsReport": {
+      "type": "object",
+      "properties": {
+        "valid": { "type": "boolean" },
+        "packagingMode": { "enum": ["single-body-step", "multi-body-step"] },
+        "bodyCount": { "type": "integer", "minimum": 1 },
+        "stepSolidCount": { "type": "integer", "minimum": 1 },
+        "totalVolumeMm3": { "type": "number", "exclusiveMinimum": 0 },
+        "knownMassKg": { "type": "number", "minimum": 0 },
+        "massComplete": { "type": "boolean" },
+        "bodies": { "type": "array" },
+        "relations": { "type": "array" }
+      }
+    }
+  },
+  "$defs": {
+    "vector3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "feature": {
+      "type": "object",
+      "required": ["id", "operation", "parameters"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "itemId": { "type": "string" },
+        "operation": {
+          "enum": ["rectangle", "extrude", "pad", "hole", "hole_pattern", "fillet", "fillet_edges", "corner_guard", "corner_cap", "direct_transition", "tray_bracket", "gusset_bracket", "fork_plate", "arched_plate", "rounded_end_plate", "feature_tree", "box", "cylinder"]
+        },
+        "parameters": { "type": "object" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "status": { "enum": ["confirmed", "approximate"] }
+      }
+    }
+  }
+}
