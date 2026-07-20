@@ -1,6 +1,6 @@
-# CAD Annotator Lite
+# Drawing2STEP
 
-A focused hybrid rebuild of CAID Technologies' CAD-Annotator: upload a technical drawing, separate physical items and views with hosted or local vision AI, inspect CAD-style annotation layers, and export validated geometry JSON or STEP.
+Drawing2STEP is a focused hybrid rebuild of CAID Technologies' CAD-Annotator: upload a technical drawing, separate physical items and views with hosted or local vision AI, inspect CAD-style annotation layers, and export validated geometry JSON or STEP.
 
 The workspace is inspired by AutoCAD's model-space workflow—drawing canvas, grid, layers, overlays, zoom, item groups, and local geometry export—but it is not a replacement for AutoCAD's complete drafting and modeling command set.
 
@@ -10,7 +10,7 @@ It builds on the Apache-2.0 licensed [caid-technologies/CAD-Annotator](https://g
 
 ## Why this rebuild
 
-- **Zero dependencies:** native Node HTTP server and browser APIs; no install step.
+- **Zero npm runtime dependencies:** the web app uses Node's native HTTP server and browser APIs. Local AI and CAD export have separate optional system requirements documented below.
 - **Hosted accuracy or local privacy:** use the OpenAI API for the strongest configured vision model, or Qwen3-VL through Ollama without a key.
 - **Explicit data path:** the engine selector states whether the uploaded image is sent to OpenAI or stays on the device.
 - **Small surface:** no ORM, generated clients, workspace packages, or UI framework.
@@ -92,19 +92,159 @@ Codex also helped:
 
 Codex accelerated construction, debugging, testing, and review; it did not replace engineering judgment. The decisions to avoid fabricating missing manufacturing dimensions, constrain the supported operation vocabulary, and require reviewable evidence for generated features remained human-directed.
 
-## Run
+## Installation and first run
 
-Requires Node.js 20 or later.
+The instructions below are Windows-first because Drawing2STEP's automatic FreeCAD discovery currently targets standard Windows installation paths. The Node server and browser interface can also run on macOS or Linux, but the CAD command paths must then be configured for that system.
+
+### What is required?
+
+| Capability | Requirement |
+| --- | --- |
+| Browser interface and bundled demo | [Node.js](https://nodejs.org/en/download/) 20 or later; the current LTS release is recommended |
+| Private local image analysis | [Ollama](https://ollama.com/download/windows) plus the `qwen3-vl:4b` vision model |
+| Verified STEP, generalized feature trees, and physics checks | [FreeCAD](https://www.freecad.org/downloads.php?lang=eng) 1.1.x recommended |
+| Direct recipe-to-STEP alternative | Python plus CadQuery from `requirements-step.txt` |
+| Hosted OpenAI analysis | Optional OpenAI Platform API key and available API credits |
+
+No `npm install` step is required: the application has no npm runtime dependencies.
+
+### 1. Get the project and verify Node.js
 
 ```powershell
-node server.mjs
+git clone https://github.com/raffrant/CAD-Annotator-Lite.git Drawing2STEP
+cd Drawing2STEP
+node --version
+npm --version
 ```
 
-Open <http://localhost:8080>. Without a key or Ollama, use **Try with local demo results**.
+`node --version` must report v20 or later. If Node is missing or outdated, install a current LTS release from the [official Node.js download page](https://nodejs.org/en/download/), then open a new terminal.
 
-Local Ollama is the default whenever its configured model is installed. For optional hosted analysis, run `Copy-Item .env.example .env`, put a valid Platform API key in `.env`, then restart the server and explicitly choose **OpenAI API** in the UI. `OPENAI_MODEL` defaults to `gpt-5.6`. The key stays server-side. API use consumes account quota/credits, and uploaded images are sent to OpenAI only when that engine is selected.
+### 2. Choose an analysis mode
 
-For private local analysis, install Ollama and `qwen3-vl:4b`, then choose **Local Ollama**. Set `OLLAMA_MODEL` to another installed vision model if desired. No API key, credits, or external upload are used in local mode.
+#### Option A: Local Ollama — recommended for a private, key-free demo
+
+Install Ollama on Windows using its official installer or this command from the [official Ollama download page](https://ollama.com/download/windows):
+
+```powershell
+irm https://ollama.com/install.ps1 | iex
+```
+
+Open a new PowerShell window, download the configured vision model, and verify it is installed:
+
+```powershell
+ollama pull qwen3-vl:4b
+ollama list
+```
+
+Ollama normally runs in the background on Windows and exposes its API at `http://127.0.0.1:11434`. If it is installed but not running, launch the Ollama application or run the following command in a separate terminal:
+
+```powershell
+ollama serve
+```
+
+Verify the local service from PowerShell:
+
+```powershell
+(Invoke-RestMethod http://127.0.0.1:11434/api/tags).models.name
+```
+
+The output should include `qwen3-vl:4b`. Drawing2STEP selects **Local Ollama** by default. Images remain on the machine and no API key or OpenAI credits are used. Local processing still consumes the computer's CPU/GPU, memory, storage, and electricity.
+
+#### Option B: OpenAI API — optional hosted analysis
+
+Create a local environment file:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Set `OPENAI_API_KEY` to a valid server-side Platform API key and optionally change `OPENAI_MODEL`. Restart Drawing2STEP, then explicitly choose **OpenAI API** in the interface. The key stays in the Node server and must never be added to `public/` or committed. This mode sends the selected image to OpenAI and consumes API quota/credits.
+
+#### Option C: Interface-only demo
+
+No AI service is needed. Start the app and select **Try with local demo results**. This demonstrates the review interface but does not analyze a new image.
+
+### 3. Install a CAD backend
+
+#### Recommended: FreeCAD
+
+Install the current stable 64-bit FreeCAD release from the [official FreeCAD download page](https://www.freecad.org/downloads.php?lang=eng). Drawing2STEP automatically checks these Windows locations:
+
+```text
+C:\Program Files\FreeCAD 1.1\bin\freecadcmd.exe
+C:\Program Files\FreeCAD 1.0\bin\FreeCADCmd.exe
+C:\Program Files\FreeCAD 0.21\bin\FreeCADCmd.exe
+```
+
+Verify the recommended path:
+
+```powershell
+& "C:\Program Files\FreeCAD 1.1\bin\freecadcmd.exe" --version
+```
+
+If FreeCAD is installed elsewhere, add its executable to `.env`:
+
+```dotenv
+FREECAD_CMD=C:\Path\To\FreeCAD\bin\FreeCADCmd.exe
+```
+
+FreeCAD is required for generalized feature-tree execution and deterministic physics verification. It is also the recommended application for reopening and visually inspecting the generated STEP.
+
+#### Alternative for supported direct recipes: CadQuery
+
+Python is not needed merely to open the web interface. To use the CadQuery converter, create a virtual environment and install the pinned requirements:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements-step.txt
+python -c "import cadquery; print(cadquery.__version__)"
+```
+
+Start Drawing2STEP from the same activated terminal so the server uses that Python environment. CadQuery handles the supported direct recipes; keep FreeCAD installed for generalized feature trees and physics reports.
+
+### 4. Start Drawing2STEP
+
+```powershell
+npm start
+```
+
+`node server.mjs` is equivalent. The terminal should print the local URL. Open <http://localhost:8080> and verify the detected services:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/health | Format-List
+```
+
+Important health fields are:
+
+- `localAi: true` — Ollama is reachable;
+- `modelReady: true` — the configured vision model is installed;
+- `freecadReady: true` — a supported FreeCAD command was detected;
+- `openAiConfigured: true` — a hosted API key is configured.
+
+If the page was already open, refresh it after restarting the server.
+
+### 5. First complete conversion
+
+1. Click **Choose a drawing** and select a PNG, JPG, or WEBP image.
+2. Select **Local Ollama** or **OpenAI API** under **Vision engine**.
+3. Leave **AI verification pass** enabled and click **Analyze with AI**.
+4. Review the detected bodies, dimensions, evidence, assumptions, and validation messages.
+5. Click **Export geometry JSON** to preserve the editable feature program.
+6. Click **Build merged STEP** to create the 3D result.
+7. In FreeCAD, choose **File → Open**, select the generated `.step` file, rotate it, and verify every body, hole, cut, and dimension.
+
+### Troubleshooting installation
+
+- **`ollama` is not recognized:** reopen PowerShell after installation, or launch Ollama from the Start menu.
+- **`Local AI unavailable`:** confirm `ollama serve` is running and `/api/tags` responds.
+- **Model not ready:** run `ollama pull qwen3-vl:4b` and ensure `.env` contains `OLLAMA_MODEL=qwen3-vl:4b`.
+- **FreeCAD not detected:** verify the command path, then set `FREECAD_CMD` in `.env`.
+- **PowerShell blocks virtual-environment activation:** run `Set-ExecutionPolicy -Scope Process Bypass`, then activate `.venv` again.
+- **Port 8080 is occupied:** set `PORT=8081` in `.env`, restart, and open `http://localhost:8081`.
+- **Hosted analysis returns 429:** the OpenAI API account has exhausted or lacks available quota; use Local Ollama or add API credits.
 
 Local generation uses a 16,384-token context by default and automatically retries truncated or malformed JSON with a compact-output instruction. Complex drawings inherently produce larger feature programs than simple parts. If Ollama still reports `done_reason: length` and the computer has sufficient RAM/VRAM, set `OLLAMA_NUM_CTX=32768` in `.env` and restart the Node server. A larger context improves output capacity but uses more memory and does not remove ambiguity from hidden or unreadable geometry.
 
@@ -165,7 +305,7 @@ The workflow is fully automatic, but it is not unlimited or infallible: a single
 
 Related research points to the same limitation observed during development: dependable image-to-CAD generation needs diverse examples that connect visual evidence to executable geometry. The 2026 paper [GIFT: Bootstrapping Image-to-CAD Program Synthesis via Geometric Feedback](https://arxiv.org/abs/2603.27448) reports that a specialist model improved when its original image/program training set was expanded with geometrically verified alternative programs and structured near-miss failures. Its ablation also found that ordinary image augmentation alone produced a much smaller improvement.
 
-CAD Annotator Lite shares the paper's broad image-to-program-to-kernel pattern, but it solves a different input problem. GIFT primarily evaluates rendered single-view CAD images against known CAD programs and ground-truth solids. This project accepts engineering drawings that may contain dimensions, borders, hidden lines, centerlines, sections, repeated orthographic views, multiple bodies, inconsistent annotations, and information that is genuinely missing. It currently uses prompted general-purpose vision models rather than a CAD-specialized model fine-tuned on a large ground-truth dataset.
+Drawing2STEP shares the paper's broad image-to-program-to-kernel pattern, but it solves a different input problem. GIFT primarily evaluates rendered single-view CAD images against known CAD programs and ground-truth solids. This project accepts engineering drawings that may contain dimensions, borders, hidden lines, centerlines, sections, repeated orthographic views, multiple bodies, inconsistent annotations, and information that is genuinely missing. It currently uses prompted general-purpose vision models rather than a CAD-specialized model fine-tuned on a large ground-truth dataset.
 
 ### Valid export is not the same as accurate reconstruction
 
