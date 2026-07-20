@@ -161,6 +161,72 @@ The annotation-only JSON still is not STEP input. A valid input contains a `node
 
 The workflow is fully automatic, but it is not unlimited or infallible: a single perspective image does not mathematically determine hidden dimensions, internal geometry, material, fit, or intended motion. Outputs therefore distinguish confirmed dimensions from proportion-based estimates and use `manufacturingStatus: "approximate-unverified"`. A valid STEP and physics report mean the proposed geometry is structurally valid, consistently translated, and internally checked; they do not certify that estimates match a physical part. Dimensioned multi-view drawings produce much stronger results than a lone perspective render.
 
+## Evaluation and dataset challenges
+
+Related research points to the same limitation observed during development: dependable image-to-CAD generation needs diverse examples that connect visual evidence to executable geometry. The 2026 paper [GIFT: Bootstrapping Image-to-CAD Program Synthesis via Geometric Feedback](https://arxiv.org/abs/2603.27448) reports that a specialist model improved when its original image/program training set was expanded with geometrically verified alternative programs and structured near-miss failures. Its ablation also found that ordinary image augmentation alone produced a much smaller improvement.
+
+CAD Annotator Lite shares the paper's broad image-to-program-to-kernel pattern, but it solves a different input problem. GIFT primarily evaluates rendered single-view CAD images against known CAD programs and ground-truth solids. This project accepts engineering drawings that may contain dimensions, borders, hidden lines, centerlines, sections, repeated orthographic views, multiple bodies, inconsistent annotations, and information that is genuinely missing. It currently uses prompted general-purpose vision models rather than a CAD-specialized model fine-tuned on a large ground-truth dataset.
+
+### Valid export is not the same as accurate reconstruction
+
+A larger dataset is not required for the software to export a STEP file. One sufficiently specified drawing can produce a STEP file when its feature program passes validation and the CAD kernel builds a valid solid. However, export success proves only that the proposed program is executable. It does not prove that the body count, topology, dimensions, curves, or design intent match the source drawing.
+
+There are therefore several separate success levels:
+
+1. The document, physical parts, and repeated views are classified correctly.
+2. The generated geometry JSON satisfies the versioned contract.
+3. CadQuery/OpenCASCADE or FreeCAD builds a valid B-Rep solid.
+4. The exported STEP file can be reopened successfully.
+5. The reconstructed topology and dimensions agree with independently prepared ground truth.
+6. The workflow correctly refuses export when essential manufacturing information is absent.
+
+The current tests are strongest at levels 2–4: they exercise contract validation, supported operations, assemblies, curved fixtures, physical checks, and real geometry execution. A larger evaluation corpus is needed before making statistical claims about levels 1, 5, and 6 across unfamiliar drawings.
+
+### Why more examples must be chosen carefully
+
+Simply producing many blurred, rotated, or resized copies of one bracket does not demonstrate generalization. Those variants are useful robustness tests, but they remain correlated examples of the same geometry. A credible evaluation set needs independent parts across distinct geometry and drawing families, including:
+
+- simple prismatic and revolved parts;
+- arcs, concentric curves, rounded ends, fillets, and chamfers;
+- holes, slots, patterns, and asymmetric cut-outs;
+- single-body and multi-body assemblies;
+- repeated plan, front, side, section, detail, and isometric views;
+- clean exports, scans, compression artifacts, faded lines, and perspective distortion;
+- complete drawings, missing dimensions, and contradictory dimensions;
+- supported parts that should export and unsupported inputs that should be refused.
+
+Every evaluated part should ideally include the source drawing, a reviewed parameter/feature record, a ground-truth STEP file, and metadata describing its family, difficulty, and expected export decision. All visual variants of the same underlying part must remain in the same development or test split to prevent leakage.
+
+### Evaluation plan
+
+An initial Build Week evaluation can use 30–50 independent, deliberately varied parts to reveal failure categories. A set of roughly 100 independent parts provides a more useful first estimate of an overall success rate, although results should still be reported by geometry family and difficulty. Larger samples are needed for narrow statistical confidence intervals; under the conservative assumption that the true success probability is near 50%, the approximate sample requirement is
+
+$$
+n \approx \frac{1.96^2(0.5)(0.5)}{e^2},
+$$
+
+where $e$ is the desired 95% confidence-interval half-width. This gives approximately 96 independent samples for $e=0.10$ and 385 for $e=0.05$. These are statistical reference points, not claims about the number of examples required to fine-tune a model.
+
+Evaluation should report more than a single “STEP generated” percentage:
+
+- document, part, and view classification accuracy;
+- geometry-contract pass rate;
+- valid-solid and reopenable-STEP rate;
+- correct body, feature, hole, and profile counts;
+- absolute dimension error in millimetres for confirmed values;
+- geometric overlap or surface-distance against ground truth;
+- correct-refusal rate for under-specified or unsupported drawings;
+- repeatability across multiple generations of the same drawing;
+- results separated by engine, geometry family, image quality, and difficulty.
+
+The paper uses shape IoU after normalizing and aligning the predicted and ground-truth solids. That is valuable for shape comparison, but normalization can hide an incorrect physical scale. Manufacturing-drawing evaluation must also compare absolute dimensions and topology. A visually similar 80 mm part is not an accurate reconstruction of a dimensioned 100 mm part.
+
+### How geometric feedback could extend this project
+
+The existing validation and batch-export tools provide the start of a feedback loop: execute the proposed program, record structural failures, and verify the resulting STEP. To apply a GIFT-like training strategy, the project would additionally need ground-truth programs or STEP files, a geometric comparison metric, many sampled candidate programs, rules for retaining valid alternatives and useful near misses, and an actual fine-tuning pipeline for the local model.
+
+Without fine-tuning, a larger corpus still has immediate value: it can improve prompts, schemas, deterministic reconstruction rules, refusal behavior, regression tests, and the honesty of reported limitations. It does not automatically change the Ollama model's weights. For this project, the next practical milestone is therefore a reproducible ground-truth benchmark before attempting large-scale model training.
+
 ## Test
 
 ```powershell
