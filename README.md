@@ -1,6 +1,6 @@
-# Drawing2STEP
+# Drawing-to-CAD
 
-Drawing2STEP is a focused hybrid rebuild of CAID Technologies' CAD-Annotator: upload a technical drawing, separate physical items and views with hosted or local vision AI, inspect CAD-style annotation layers, and export validated geometry JSON or STEP.
+Drawing-to-CAD is a focused hybrid rebuild of CAID Technologies' CAD-Annotator: upload a technical drawing, separate physical items and views with hosted or local vision AI, inspect CAD-style annotation layers, and export validated geometry JSON or STEP.
 
 The workspace is inspired by AutoCAD's model-space workflow—drawing canvas, grid, layers, overlays, zoom, item groups, and local geometry export—but it is not a replacement for AutoCAD's complete drafting and modeling command set.
 
@@ -94,7 +94,7 @@ Codex accelerated construction, debugging, testing, and review; it did not repla
 
 ## Installation and first run
 
-The instructions below are Windows-first because Drawing2STEP's automatic FreeCAD discovery currently targets standard Windows installation paths. The Node server and browser interface can also run on macOS or Linux, but the CAD command paths must then be configured for that system.
+The instructions below are Windows-first because Drawing-to-CAD's automatic FreeCAD discovery currently targets standard Windows installation paths. The Node server and browser interface can also run on macOS or Linux, but the CAD command paths must then be configured for that system.
 
 ### What is required?
 
@@ -111,8 +111,8 @@ No `npm install` step is required: the application has no npm runtime dependenci
 ### 1. Get the project and verify Node.js
 
 ```powershell
-git clone https://github.com/raffrant/CAD-Annotator-Lite.git Drawing2STEP
-cd Drawing2STEP
+git clone https://github.com/raffrant/CAD-Annotator-Lite.git Drawing-to-CAD
+cd Drawing-to-CAD
 node --version
 npm --version
 ```
@@ -148,7 +148,7 @@ Verify the local service from PowerShell:
 (Invoke-RestMethod http://127.0.0.1:11434/api/tags).models.name
 ```
 
-The output should include `qwen3-vl:4b`. Drawing2STEP selects **Local Ollama** by default. Images remain on the machine and no API key or OpenAI credits are used. Local processing still consumes the computer's CPU/GPU, memory, storage, and electricity.
+The output should include `qwen3-vl:4b`. Drawing-to-CAD selects **Local Ollama** by default. Images remain on the machine and no API key or OpenAI credits are used. Local processing still consumes the computer's CPU/GPU, memory, storage, and electricity.
 
 #### Option B: OpenAI API — optional hosted analysis
 
@@ -159,7 +159,7 @@ Copy-Item .env.example .env
 notepad .env
 ```
 
-Set `OPENAI_API_KEY` to a valid server-side Platform API key and optionally change `OPENAI_MODEL`. Restart Drawing2STEP, then explicitly choose **OpenAI API** in the interface. The key stays in the Node server and must never be added to `public/` or committed. This mode sends the selected image to OpenAI and consumes API quota/credits.
+Set `OPENAI_API_KEY` to a valid server-side Platform API key and optionally change `OPENAI_MODEL`. Restart Drawing-to-CAD, then explicitly choose **OpenAI API** in the interface. The key stays in the Node server and must never be added to `public/` or committed. This mode sends the selected image to OpenAI and consumes API quota/credits.
 
 #### Option C: Interface-only demo
 
@@ -169,7 +169,7 @@ No AI service is needed. Start the app and select **Try with local demo results*
 
 #### Recommended: FreeCAD
 
-Install the current stable 64-bit FreeCAD release from the [official FreeCAD download page](https://www.freecad.org/downloads.php?lang=eng). Drawing2STEP automatically checks these Windows locations:
+Install the current stable 64-bit FreeCAD release from the [official FreeCAD download page](https://www.freecad.org/downloads.php?lang=eng). Drawing-to-CAD automatically checks these Windows locations:
 
 ```text
 C:\Program Files\FreeCAD 1.1\bin\freecadcmd.exe
@@ -203,9 +203,9 @@ python -m pip install -r requirements-step.txt
 python -c "import cadquery; print(cadquery.__version__)"
 ```
 
-Start Drawing2STEP from the same activated terminal so the server uses that Python environment. CadQuery handles the supported direct recipes; keep FreeCAD installed for generalized feature trees and physics reports.
+Start Drawing-to-CAD from the same activated terminal so the server uses that Python environment. CadQuery handles the supported direct recipes; keep FreeCAD installed for generalized feature trees and physics reports.
 
-### 4. Start Drawing2STEP
+### 4. Start Drawing-to-CAD
 
 ```powershell
 npm start
@@ -305,7 +305,7 @@ The workflow is fully automatic, but it is not unlimited or infallible: a single
 
 Related research points to the same limitation observed during development: dependable image-to-CAD generation needs diverse examples that connect visual evidence to executable geometry. The 2026 paper [GIFT: Bootstrapping Image-to-CAD Program Synthesis via Geometric Feedback](https://arxiv.org/abs/2603.27448) reports that a specialist model improved when its original image/program training set was expanded with geometrically verified alternative programs and structured near-miss failures. Its ablation also found that ordinary image augmentation alone produced a much smaller improvement.
 
-Drawing2STEP shares the paper's broad image-to-program-to-kernel pattern, but it solves a different input problem. GIFT primarily evaluates rendered single-view CAD images against known CAD programs and ground-truth solids. This project accepts engineering drawings that may contain dimensions, borders, hidden lines, centerlines, sections, repeated orthographic views, multiple bodies, inconsistent annotations, and information that is genuinely missing. It currently uses prompted general-purpose vision models rather than a CAD-specialized model fine-tuned on a large ground-truth dataset.
+Drawing-to-CAD shares the paper's broad image-to-program-to-kernel pattern, but it solves a different input problem. GIFT primarily evaluates rendered single-view CAD images against known CAD programs and ground-truth solids. This project accepts engineering drawings that may contain dimensions, borders, hidden lines, centerlines, sections, repeated orthographic views, multiple bodies, inconsistent annotations, and information that is genuinely missing. It currently uses prompted general-purpose vision models rather than a CAD-specialized model fine-tuned on a large ground-truth dataset.
 
 ### Valid export is not the same as accurate reconstruction
 
