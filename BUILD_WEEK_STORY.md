@@ -2,199 +2,230 @@
 
 ## Inspiration
 
-Protolab began with a conversation with my co-worker, Dean, about improving an engineering-drawing annotation tool.
+Many manufacturers still rely on legacy 2D engineering drawings, yet converting them into editable 3D CAD remains a slow and manual process. Skilled engineers must repeatedly interpret dimensions, compare orthographic views, reconstruct feature histories, and validate the final model before it can be manufactured or modified.
 
-Many companies still rely on legacy 2D drawings. These drawings may contain enough information to manufacture a part, but converting them into editable 3D CAD is slow, repetitive, and dependent on skilled engineers.
+Modern vision-language models can recognize dimensions, labels, and drawing views, but they generally stop after annotation. They do not generate an engineering model that can be edited, validated, or manufactured.
 
-Existing vision tools can identify dimensions and labels, but annotations alone do not produce a usable engineering model. We wanted to create a more productive workflow that could:
+Protolab was inspired by a conversation with my coworker, Dean, about extending an existing engineering-drawing annotation tool into something far more useful. Instead of simply extracting annotations, we wanted AI to become an engineering assistant that could understand a drawing, organize its evidence, propose a CAD reconstruction, and produce editable geometry while remaining transparent about what was directly supported by the drawing and what still required engineering judgment.
 
-- understand a drawing;
-- organize its engineering evidence;
-- propose a CAD feature plan;
-- generate real 3D geometry;
-- show which source information supported each decision.
+Starting from the open-source CAD-Annotator project, my Build Week goal was to transform annotation into a complete drawing-to-CAD workflow.
 
-I started with [caid-technologies/CAD-Annotator](https://github.com/caid-technologies/CAD-Annotator), which already supported drawing uploads, vision-based annotation extraction, and bounding-box visualization.
+The guiding question became:
 
-My Build Week goal was to extend it from an annotation tool into an end-to-end drawing-to-CAD workflow.
+> **Can AI reduce the manual work of CAD reconstruction while remaining honest about what the drawing does—and does not—prove?**
 
-The core question became:
+---
 
-> Can AI reduce the manual work of reconstructing CAD while remaining honest about what the drawing does—and does not—prove?
+# What I built
 
-## What I built
+Protolab converts rasterized engineering drawings into evidence-backed, editable CAD models and validated ISO 10303 STEP files.
 
-Protolab converts a rasterized engineering drawing into an evidence-backed parametric model and a validated ISO 10303 STEP file.
-
-Instead of manually rereading dimensions and rebuilding every feature, an engineer can upload a drawing and receive:
+Instead of manually recreating geometry feature by feature, engineers upload a drawing and receive a structured engineering workflow that includes:
 
 - extracted dimensions, annotations, and drawing views;
-- a structured reconstruction plan;
-- traceable links between CAD parameters and source evidence;
-- confirmed, inferred, and unresolved values clearly separated;
+- grouped orthographic views and detected physical bodies;
+- a validated CAD feature reconstruction plan;
 - editable 3D geometry;
-- a validated STEP file for continued engineering work.
+- a manufacturable STEP model;
+- traceable links between every CAD parameter and its supporting drawing evidence.
 
-The system analyzes both the full drawing and overlapping high-resolution regions so small dimensions remain readable. It reconciles duplicate observations, groups multiple views of the same part, and identifies when a drawing contains separate physical bodies.
+To improve accuracy, Protolab analyzes both the complete drawing and overlapping high-resolution regions so small dimensions remain readable. Duplicate observations are reconciled, multiple drawing views are grouped into a single physical object, and separate manufactured bodies are identified when appropriate.
 
-It supports common operations such as profiles, lines, arcs, circles, extrusions, cuts, holes, patterns, revolutions, fillets, and chamfers.
+The current reconstruction pipeline supports common parametric CAD operations including sketches, extrusions, revolutions, cuts, holes, patterns, fillets, and chamfers.
 
-Before export, Protolab checks whether the proposed geometry is valid. It reports properties including solid count, bounding boxes, volume, surface area, center of mass, and contact or interference between bodies.
+Before exporting, every reconstructed model is validated through a deterministic geometry pipeline. The system checks solid validity, body count, bounding boxes, volume, surface area, center of mass, and body interference before producing the final STEP file.
 
-The goal is not to remove engineers from the process. It is to reduce repetitive reconstruction work and give them a faster, more transparent starting point.
+Rather than replacing engineers, Protolab reduces repetitive reconstruction work and provides a transparent, editable starting point that engineers can confidently review, modify, and manufacture.
 
-## How I built it
+---
 
-I approached the problem as a hybrid AI and deterministic geometry system.
+# How I built it
 
-The vision model is responsible for interpreting the drawing: recognizing views, reading annotations, associating dimensions with features, and proposing a reconstruction plan. Conventional code is responsible for coordinate transforms, schema validation, feature execution, physical checks, and STEP export. This creates an intentional boundary between what the model *believes* it sees and what the CAD engine can actually build and verify.
+I approached Protolab as a hybrid AI and deterministic geometry system.
 
-For tiled analysis, an annotation at tile-local coordinates \((x_t,y_t)\) is mapped back to the full drawing using the tile offset \((o_x,o_y)\):
+The vision model is responsible for interpreting engineering drawings: recognizing views, reading annotations, associating dimensions with geometry, and proposing a reconstruction plan. Deterministic software is responsible for coordinate transforms, schema validation, feature execution, geometry verification, and STEP generation.
 
-$$
-x_g = x_t + o_x, \qquad y_g = y_t + o_y
-$$
+This separation creates a deliberate boundary between what the model believes it sees and what the CAD engine can actually verify.
 
-Overlapping tiles improve small-text recognition, but they can produce repeated observations. Those observations are normalized and compared using their labels, values, view membership, spatial distance, and bounding-box overlap. A common overlap measure is intersection over union:
+### Coordinate reconciliation
 
-$$
-\operatorname{IoU}(A,B) = \frac{|A \cap B|}{|A \cup B|}
-$$
-
-Likely duplicates are merged deterministically while their source-tile provenance and confidence are retained.
-
-The model output is not sent directly to the geometry kernel. It first passes through a versioned geometry contract that checks positive dimensions, supported operations, item references, transforms, base-feature compatibility, and evidence status. Geometry is then built as an ordered feature history. Conceptually, the result is:
+Engineering drawings are analyzed in overlapping tiles to preserve readability of small annotations. Tile-local coordinates are transformed back into global drawing coordinates using
 
 $$
-S_n = f_n\!\left(f_{n-1}\!\left(\dots f_2(f_1(S_0))\right)\right)
+x_g=x_t+o_x,\qquad
+y_g=y_t+o_y
 $$
 
-where \(S_0\) is the initial profile or solid and each \(f_i\) is a validated CAD operation such as an extrusion, cut, fillet, or chamfer.
+where $(o_x,o_y)$ represents the tile offset.
 
-I used GPT-5.6 for hosted drawing interpretation and reconstruction planning, while keeping the API key and model calls on the server. I also added a local vision path for private analysis. The final STEP conversion happens locally, and invalid model output is rejected or returned for correction rather than silently converted into partial geometry.
+### Duplicate removal
 
-Codex accelerated the work by helping me inspect the upstream project, understand its architecture, design the reconstruction contract, implement and debug the TypeScript and browser workflow, generalize the Python geometry executor, create focused tests and fixtures, diagnose native CAD dependency issues, and verify that the exported files contain real OpenCASCADE STEP geometry.
+Because overlapping tiles observe the same geometry multiple times, extracted annotations are compared using labels, dimensions, spatial proximity, drawing views, and bounding-box overlap.
 
-The core product decisions remained human-directed: choosing the engineering problem with Dean, limiting the supported geometry, requiring evidence and confidence, keeping separate bodies separate, and refusing to present inferred dimensions as manufacturing truth.
-
-## Challenges I faced
-
-### 1. Curved geometry is much harder than it appears
-
-Curved parts were the largest interpretation challenge. A raster image can show an arc, rounded end, fillet, concentric opening, or perspective-distorted circle without clearly revealing its construction. The model may recognize that a boundary is curved but still confuse the radius, center, tangent relationship, or whether the curve is additive or subtractive.
-
-For a circle, a few noisy pixels can significantly affect the inferred parameters:
+A common similarity metric is Intersection over Union:
 
 $$
-(x-a)^2 + (y-b)^2 = r^2
+\operatorname{IoU}(A,B)=
+\frac{|A\cap B|}
+{|A\cup B|}
 $$
 
-If \((a,b)\) or \(r\) is not explicitly dimensioned, many different valid circles can resemble the same rasterized curve. Perspective and line thickness make the ambiguity worse. The solution was not to pretend that the model had recovered exact geometry. I expanded the operation vocabulary gradually, added dimension and topology checks, created targeted fixtures for arc-based parts, and marked unsupported or inferred values for review.
+Likely duplicates are merged while preserving confidence scores and provenance back to the original drawing regions.
 
-### 2. Even 2D drawings require extensive iteration
+### Geometry reconstruction
 
-At first, the problem seemed simpler because the input was “only” a 2D technical drawing. In practice, reliable interpretation required repeated prompt refinement, examples, evaluation cases, schema constraints, and deterministic post-processing. This was closer to training a workflow than asking a model a single question.
+The model output is never executed directly.
 
-Engineering drawings contain borders, extension lines, centerlines, section marks, hidden lines, multiple scales, repeated views, and dimensions that may apply to geometry far from their printed position. The system had to learn, through iterative evaluation and explicit rules, which lines describe the part and which lines only describe the drawing.
+Instead, every proposed operation passes through a versioned geometry contract that validates:
 
-### 3. Multiple views are not multiple parts
+- supported CAD operations;
+- positive dimensions;
+- valid references;
+- transformation consistency;
+- evidence status;
+- feature dependencies.
 
-Front, top, side, section, and detail views often describe the same physical body. A naïve pipeline can create one solid per view or interpret a detail view as a separate component. I added view grouping and body-decomposition rules so that orthographic views reinforce one reconstruction while visible seams, joints, material changes, and motion boundaries can indicate separate manufactured bodies.
+Validated operations are then executed as an ordered feature history
 
-### 4. Missing dimensions create an unavoidable truth boundary
+$$
+S_n=
+f_n\!\left(
+f_{n-1}
+\left(
+\dots
+f_2(f_1(S_0))
+\right)
+\right)
+$$
 
-A single image does not uniquely determine hidden geometry, thickness, material, tolerances, fit, or design intent. There is no algorithm that can recover information that was never present in the drawing.
+where $S_0$ is the initial sketch or solid and each $f_i$ represents a verified CAD operation such as an extrusion, cut, fillet, or chamfer.
 
-This forced an important product decision: distinguish transcribed dimensions from inferred estimates and expose unresolved requirements instead of inventing plausible manufacturing values. A structurally valid STEP file proves that the proposed geometry can be built; it does **not** prove that every inferred parameter matches the designer's intent.
+### AI and CAD pipeline
 
-### 5. Model output had to become executable without becoming trusted
+GPT-5.6 performs hosted drawing interpretation and reconstruction planning while keeping model credentials securely on the server. A local vision pipeline is also available for privacy-sensitive workflows.
 
-Vision-language models can return malformed JSON, truncated responses, unsupported operations, inconsistent units, impossible radii, zero-sized solids, or holes outside the owning face. Generating syntactically valid JSON was not enough.
+Generated reconstruction plans are executed locally through OpenCASCADE-based CAD tooling. Invalid outputs are rejected, corrected, or returned for review rather than silently producing incomplete geometry.
 
-I added strict schemas, compact retry paths, explicit units, bounded operations, dimension ledgers, geometric preconditions, and a correction pass that receives the exact validation failures. This made failures visible and actionable while preventing invalid plans from reaching the CAD kernel.
+### Development workflow
 
-### 6. CAD dependencies and export validation are real engineering work
+Codex significantly accelerated development by helping inspect the original project architecture, implement the reconstruction contract, extend the browser workflow, generalize the Python CAD executor, diagnose native CAD dependencies, build focused tests, and verify exported STEP geometry.
 
-Producing a file named `.step` is easy; producing a valid solid through a real geometry kernel is not. CadQuery, OpenCASCADE, and FreeCAD introduce native dependencies and environment-specific behavior. I had to diagnose installation and command-line execution issues, support practical fallback paths, inspect exported files, and test actual geometric properties rather than trusting a successful process exit.
+The engineering decisions remained human-directed: defining the supported operation set, preserving evidence traceability, separating inferred values from confirmed dimensions, grouping orthographic views correctly, and ensuring that unsupported geometry is reported instead of fabricated.
 
-### 7. A reproducible demo needs more than a successful golden run
+---
 
-The golden bracket result proved the pipeline, but a Build Week submission also needs a bundled input, stable setup instructions, repeatable output, clear limitations, and a short demonstration that viewers can understand. Preparing fixtures and validation reports was essential for showing that the result was produced by the workflow rather than handcrafted for the video.
+# Challenges I faced
 
-## What I learned
+## 1. Curved geometry is far more ambiguous than it appears
 
-The strongest AI productivity tools do not simply generate outputs. They reduce repetitive work while making results easier to review and trust.
+Curved geometry became the largest interpretation challenge. Raster images often show arcs, fillets, rounded ends, or circles without uniquely determining their construction.
 
-Protolab works best when AI handles interpretation and planning, while deterministic software handles geometry, validation, and export.
+Even small pixel errors affect the inferred parameters
 
-The main lessons were:
+$$
+(x-a)^2+(y-b)^2=r^2
+$$
 
-- A smaller, reliable set of CAD operations is more useful than broad but unpredictable support.
-- Engineers need source evidence, not confidence scores alone.
-- Valid geometry and accurate reconstruction are different claims.
-- Multi-stage workflows are more dependable than asking one model to do everything.
-- Precise validation errors help both the model and the engineer correct problems faster.
-- Local processing matters for confidential engineering drawings.
-- Uncertainty should be visible rather than hidden behind a polished result.
+If neither the center nor radius is explicitly dimensioned, multiple geometries can satisfy the same raster image.
 
-## Why it is different
+Rather than pretending AI recovered exact geometry, I gradually expanded supported operations, added topology and dimension validation, built targeted evaluation fixtures, and clearly marked inferred parameters for engineering review.
 
-Most drawing-analysis tools stop after extracting text, dimensions, or annotations. Protolab connects that information to an executable CAD workflow.
+---
 
-It preserves four separate layers:
+## 2. Engineering drawings contain far more ambiguity than expected
 
-1. what is visible in the drawing;
-2. how the model interprets it;
-3. what the geometry engine can build;
+Although the input is only a 2D drawing, engineering documentation contains hidden lines, centerlines, section views, detail views, multiple scales, overlapping dimensions, and repeated orthographic projections.
+
+Reliable reconstruction required repeated prompt refinement, structured schemas, deterministic post-processing, and extensive evaluation.
+
+The system also had to distinguish multiple views describing the same physical object from drawings that genuinely contained multiple manufactured bodies.
+
+Most importantly, missing dimensions create a fundamental information boundary. Thickness, tolerances, hidden geometry, and design intent cannot always be recovered from a single drawing.
+
+Instead of inventing values, Protolab distinguishes confirmed dimensions, inferred estimates, and unresolved requirements.
+
+---
+
+## 3. AI output must become executable engineering data
+
+Producing valid JSON is not enough for CAD generation.
+
+Vision-language models may generate unsupported operations, inconsistent units, impossible radii, invalid references, or zero-sized solids.
+
+To address this, I implemented strict schemas, bounded operations, geometry validation, correction passes, explicit units, and detailed validation feedback before any geometry reaches the CAD kernel.
+
+Failures become visible, explainable, and recoverable instead of silently producing incorrect models.
+
+---
+
+## 4. Reliable CAD generation requires real engineering infrastructure
+
+Generating a file named `.step` is easy.
+
+Generating a valid STEP model through OpenCASCADE is not.
+
+Supporting CadQuery, OpenCASCADE, and FreeCAD required solving native dependency issues, validating exported solids, testing geometric properties, and building reproducible examples that demonstrate the complete workflow rather than a handcrafted success case.
+
+---
+
+# What I learned
+
+The most valuable AI productivity tools do not replace engineers—they eliminate repetitive work while making results easier to review.
+
+Building Protolab reinforced several lessons:
+
+- deterministic validation is as important as AI interpretation;
+- a smaller, reliable CAD vocabulary is more useful than broad but inconsistent support;
+- source evidence is more valuable than confidence scores alone;
+- valid geometry and accurate reconstruction are different claims;
+- multi-stage AI systems are more dependable than a single prompting step;
+- local execution matters for confidential engineering data;
+- uncertainty should be exposed rather than hidden.
+
+---
+
+# Why it's different
+
+Most drawing-analysis tools stop after extracting annotations.
+
+Protolab continues the workflow by reconstructing editable CAD, validating manufacturable geometry, exporting STEP models, and preserving traceability between every generated feature and its supporting drawing evidence.
+
+Instead of presenting AI output as engineering truth, it separates four distinct layers:
+
+1. what the drawing shows;
+2. how AI interprets it;
+3. what the CAD engine successfully builds;
 4. what still requires engineering review.
 
-Each generated parameter can record its value, unit, role, supporting evidence, confidence, owning body, and whether it is confirmed or inferred.
+This produces an auditable engineering proposal rather than simply another generated 3D model.
 
-This makes the result more than a generated 3D shape. It becomes an auditable engineering proposal that a person can review, correct, and continue working from.
+---
 
-## Work and productivity impact
+# Work & Productivity Impact
 
-Reconstructing CAD from legacy drawings is valuable but time-consuming work. Engineers must search for dimensions, compare views, recreate feature histories, check assumptions, and validate the resulting solids.
+Reconstructing CAD from legacy engineering drawings is repetitive, expensive, and time-consuming.
 
-Protolab brings these steps into one workflow.
+Protolab brings interpretation, reconstruction, validation, and export into a single workflow.
 
-It can help engineering teams:
+It helps engineering teams:
 
-- convert old drawings into usable digital models faster;
-- reduce repetitive CAD reconstruction;
-- review extracted dimensions in one place;
-- find missing or contradictory information earlier;
-- preserve links between source drawings and generated geometry;
-- create a starting model without hiding uncertainty;
-- keep sensitive files local when required.
+- convert legacy drawings into editable CAD faster;
+- reduce repetitive reconstruction work;
+- detect missing or conflicting dimensions earlier;
+- maintain traceability between drawings and generated geometry;
+- create manufacturable STEP models while preserving engineering uncertainty;
+- support confidential workflows through local geometry generation.
 
-This is especially useful for manufacturing teams, repair operations, suppliers, hardware startups, and organizations modernizing archives of legacy drawings.
+The workflow is especially valuable for manufacturing companies, repair operations, suppliers, hardware startups, and organizations modernizing large archives of legacy engineering drawings.
 
-## Origin and contribution
+---
 
-Protolab builds on Dean Hu’s ideation and the foundation of [caid-technologies/CAD-Annotator](https://github.com/caid-technologies/CAD-Annotator).
+# Current Status
 
-The original project provided drawing upload, vision-based annotation extraction, bounding-box visualization, and GD&T and design-for-manufacturing analysis.
+The current prototype successfully generates validated OpenCASCADE STEP models from representative engineering drawings using an evidence-backed reconstruction workflow.
 
-My Build Week work extended it with:
+Future work includes expanding curved geometry support, improving uncertainty visualization, strengthening cross-view consistency checking, and supporting additional engineering formats such as PDF, DWG, and DXF.
 
-- full-drawing and high-resolution regional analysis;
-- coordinate reconciliation and deduplication;
-- confidence and source provenance;
-- an evidence-backed geometry contract;
-- multi-view and multi-body reconstruction;
-- confirmed-versus-inferred dimension tracking;
-- CadQuery, OpenCASCADE, and FreeCAD execution;
-- geometry and interference validation;
-- real STEP export;
-- tests, fixtures, and a dedicated review workflow.
+The long-term goal is not **"one image in, perfect CAD out."**
 
-## Current status and next steps
-
-The reference bracket workflow generates a valid STEP file through OpenCASCADE. The system also supports a broader range of prismatic, revolved, curved, and multi-body examples.
-
-Next, I plan to improve curved-geometry evaluation, uncertainty visualization, cross-view contradiction detection, and support for PDF, DWG, and DXF inputs.
-
-The long-term goal is not “one image in, perfect CAD out.”
-
-It is a trustworthy productivity tool that reduces reconstruction time, shows its work, and tells engineers when human judgment is still required.
+It is a trustworthy engineering productivity tool that reduces reconstruction time, shows its work, and gives engineers an editable, validated starting point for the next stage of design and manufacturing.
