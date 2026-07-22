@@ -1,6 +1,6 @@
-# Drawing-to-CAD
+# Protolab
 
-Drawing-to-CAD (or Drawing2STEP) is a focused hybrid rebuild of CAID Technologies' CAD-Annotator: upload a technical drawing, separate physical items and views with hosted or local vision AI, inspect CAD-style annotation layers, and export validated geometry JSON or STEP.
+Protolab is a focused hybrid rebuild of Caid Technologies' CAD-Annotator: upload a technical drawing, separate physical items and views with hosted or local vision AI, inspect CAD-style annotation layers, and export validated geometry JSON or STEP.
 
 The workspace is inspired by AutoCAD's model-space workflow—drawing canvas, grid, layers, overlays, zoom, item groups, and local geometry export—but it is not a replacement for AutoCAD's complete drafting and modeling command set.
 
