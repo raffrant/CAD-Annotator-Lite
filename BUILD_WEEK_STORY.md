@@ -65,9 +65,7 @@ Because overlapping tiles observe the same geometry multiple times, extracted an
 A common similarity metric is Intersection over Union:
 
 $$
-\operatorname{IoU}(A,B)=
-\frac{|A\cap B|}
-{|A\cup B|}
+\mathrm{IoU}(A,B)=\frac{|A\cap B|}{|A\cup B|}
 $$
 
 Likely duplicates are merged while preserving confidence scores and provenance back to the original drawing regions.
